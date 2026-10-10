@@ -10075,6 +10075,10 @@ const Rules = (function () {
         img.addEventListener('error', function () {
           img.remove();
         });
+        // Google answers a site without a real icon with a tiny generic one: keep the initials.
+        img.addEventListener('load', function () {
+          if (img.naturalWidth && img.naturalWidth < 32) img.remove();
+        });
         Hub.add(box, img);
       }
       return box;
