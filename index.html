@@ -4,6 +4,10 @@
     
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#cd1e2f" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Sponsor Hub" />
     <meta name="robots" content="noindex" />
     <title>Sponsorship Hub · Project Hastings</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23cd1e2f%27/%3E%3Ctext x=%2716%27 y=%2722%27 font-family=%27Arial%27 font-size=%2716%27 font-weight=%27700%27 text-anchor=%27middle%27 fill=%27white%27%3EPH%3C/text%3E%3C/svg%3E" />
@@ -1919,6 +1923,176 @@
       margin: 0;
     }
   }
+
+  /* ---- Prospects, logos, progress and wins (view_prospects.html) ---- */
+  .logo {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    border-radius: 9px;
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    overflow: hidden;
+  }
+  .logo img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 4px;
+    background: #fff;
+  }
+  .score {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .score.high {
+    background: var(--ok-soft);
+    color: var(--ok);
+  }
+  .score.mid {
+    background: var(--soon-soft);
+    color: var(--soon);
+  }
+  .score.low {
+    background: var(--surface-2);
+    color: var(--muted);
+  }
+  .row.prospect {
+    flex-wrap: wrap;
+  }
+  .row.prospect .row-main {
+    flex: 1 1 220px;
+    min-width: 0;
+  }
+  .row.prospect .row-actions {
+    margin-left: auto;
+  }
+  .small-chip {
+    min-height: 20px;
+    font-size: 11px;
+  }
+  .progress-strip {
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent-soft), var(--surface) 65%);
+  }
+  .big-number {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .goal-bar {
+    position: relative;
+    height: 10px;
+    margin: 10px 0 8px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    overflow: hidden;
+  }
+  .goal-bar > span {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), #f2b705);
+    transition: width 600ms ease;
+  }
+  .progress-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 18px;
+  }
+  .fact {
+    min-height: 36px;
+    padding: 4px 0;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .fact strong {
+    color: var(--text);
+    font-size: 16px;
+  }
+  .fact:hover {
+    color: var(--text);
+  }
+  .wins-wall {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .win-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-height: var(--tap);
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .win-name {
+    font-weight: 700;
+  }
+  .confetti {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    pointer-events: none;
+  }
+  .routing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0 12px;
+  }
+
+  /* ---- General polish ---- */
+  .card,
+  .tile {
+    box-shadow: 0 1px 2px rgba(35, 31, 32, 0.05);
+  }
+  .tile {
+    transition:
+      transform 120ms ease,
+      box-shadow 120ms ease,
+      border-color 120ms ease;
+  }
+  .tile:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(35, 31, 32, 0.08);
+  }
+  .row.clickable {
+    transition: background-color 120ms ease;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tile,
+    .goal-bar > span,
+    .row.clickable {
+      transition: none;
+    }
+    .tile:hover {
+      transform: none;
+    }
+  }
 </style>
 
   </head>
@@ -2162,6 +2336,24 @@ const Rules = (function () {
     lead_vp_id: '',
     // Shown beside the templates and on My work so nobody hunts Drive for them.
     links: { one_pager_url: '', everything_doc_url: '', slack_channel_url: '' },
+    // Which role asks which kind of sponsor: local shops are walked in on by coordinators,
+    // companies and campus units are VP conversations. An ask of big_ask_cad or more is a VP's.
+    ask_routing: {
+      'cafe-bakery': 'coordinator',
+      restaurant: 'coordinator',
+      grocery: 'coordinator',
+      retail: 'coordinator',
+      'education-consulting': 'coordinator',
+      other: 'coordinator',
+      corporate: 'vp',
+      campus: 'vp',
+      nonprofit: 'vp',
+    },
+    big_ask_cad: 1000,
+    // How many new asks each person sees as "this week's asks".
+    asks_per_week: 5,
+    // What the term is aiming to raise (Home's progress bar), in dollars including goods.
+    term_goal_cad: 10000,
   });
 
   /**
@@ -3204,6 +3396,214 @@ const Rules = (function () {
       score: score,
       adjusted: adjusted,
       priority: adjusted >= 22 ? 'A' : adjusted >= 15 ? 'B' : 'C',
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Prospects: who to ask next, and who asks them
+  // ---------------------------------------------------------------------------
+
+  /**
+   * How good a sponsor is to ask next, 0 to 100, with the reasons in plain words. Built only from
+   * what is already on the sponsor: the six fit scores (or the priority when nobody scored it),
+   * a warm introduction, having given before, working with the Downtown Eastside, and the size of
+   * the ask.
+   * @param {Object} s a Sponsors row
+   * @returns {{score: number, reasons: string[]}}
+   */
+  function prospectScore(s) {
+    const reasons = [];
+    const fit = fitScore(s);
+    let score = fit > 0 ? fit * 2 : { A: 40, B: 25, C: 10 }[text(s.priority)] || 15;
+    if (s.priority === 'A') {
+      score += 15;
+      reasons.push('A priority');
+    } else if (s.priority === 'B') {
+      score += 8;
+    }
+    if (text(s.warm_intro)) {
+      score += 10;
+      reasons.push('warm intro');
+    }
+    if (isTrue(s.is_past_sponsor)) {
+      score += 10;
+      reasons.push('gave before');
+    }
+    if (isTrue(s.supports_dtes)) {
+      score += 5;
+      reasons.push('works in the DTES');
+    }
+    const value = Number(s.potential_value_cad);
+    if (isFinite(value) && value > 0) {
+      score += value >= 2500 ? 10 : value >= 1000 ? 7 : value >= 250 ? 4 : 2;
+      reasons.push('$' + formatNumber(value));
+    }
+    return { score: Math.max(0, Math.min(100, Math.round(score))), reasons: reasons };
+  }
+
+  /**
+   * Prospects (not archived, still in the Prospect phase), best first.
+   * @param {Object[]} sponsors
+   * @param {function(Object): boolean} [keep] an extra filter
+   * @returns {Array<{sponsor: Object, score: number, reasons: string[]}>}
+   */
+  function rankProspects(sponsors, keep) {
+    return sponsors
+      .filter(function (s) {
+        return !isTrue(s.archived) && phaseOf(text(s.stage)) === 'Prospect' && (!keep || keep(s));
+      })
+      .map(function (s) {
+        const r = prospectScore(s);
+        return { sponsor: s, score: r.score, reasons: r.reasons };
+      })
+      .sort(function (a, b) {
+        return (
+          b.score - a.score ||
+          (text(a.sponsor.name).toLowerCase() < text(b.sponsor.name).toLowerCase() ? -1 : 1)
+        );
+      });
+  }
+
+  /**
+   * Which role should make this ask (Settings "ask_routing"): a big ask is always a VP's.
+   * @param {Object} s
+   * @param {Object} [settings]
+   * @returns {'coordinator'|'vp'}
+   */
+  function routeRole(s, settings) {
+    const set = settings || DEFAULT_SETTINGS;
+    const big = Number(set.big_ask_cad) || DEFAULT_SETTINGS.big_ask_cad;
+    const value = Number(s.potential_value_cad);
+    if (isFinite(value) && value >= big) return 'vp';
+    const routing = Object.assign({}, DEFAULT_SETTINGS.ask_routing, set.ask_routing || {});
+    return routing[text(s.category)] === 'vp' ? 'vp' : 'coordinator';
+  }
+
+  /**
+   * Who should own each unassigned prospect, best prospects first: the person of the right role
+   * (routeRole) with the fewest live sponsors, counting the ones handed out earlier in the list,
+   * so the work is spread evenly. Nobody of that role on the team: coordinators and VPs both.
+   * @param {Object[]} sponsors
+   * @param {Object[]} members
+   * @param {Object} [settings]
+   * @param {number} [limit] how many to plan (all when left out)
+   * @returns {Array<{sponsor: Object, score: number, reasons: string[], owner: Object|null}>}
+   */
+  function planHandOut(sponsors, members, settings, limit) {
+    const workers = members.filter(function (m) {
+      return isTrue(m.active) && (m.role === 'coordinator' || m.role === 'vp');
+    });
+    const load = {};
+    workers.forEach(function (m) {
+      load[m.id] = activeSponsorCount(sponsors, m.id);
+    });
+    const ranked = rankProspects(sponsors, function (s) {
+      return !text(s.owner_id);
+    });
+    const plan = (limit ? ranked.slice(0, limit) : ranked).map(function (r) {
+      const role = routeRole(r.sponsor, settings);
+      let pool = workers.filter(function (m) {
+        return m.role === role;
+      });
+      if (!pool.length) pool = workers;
+      const owner = pool.slice().sort(function (a, b) {
+        return (
+          load[a.id] - load[b.id] ||
+          (text(a.full_name).toLowerCase() < text(b.full_name).toLowerCase() ? -1 : 1)
+        );
+      })[0];
+      if (owner) load[owner.id]++;
+      return Object.assign({ owner: owner || null }, r);
+    });
+    return plan;
+  }
+
+  /**
+   * This week's asks for one person: their own prospects, best first.
+   * @param {string} memberId
+   * @param {Object[]} sponsors
+   * @param {number} [n] asks_per_week
+   * @returns {Array<{sponsor: Object, score: number, reasons: string[]}>}
+   */
+  function myAsks(memberId, sponsors, n) {
+    return rankProspects(sponsors, function (s) {
+      return s.owner_id === memberId;
+    }).slice(0, n || DEFAULT_SETTINGS.asks_per_week);
+  }
+
+  /**
+   * Unassigned prospects that are this person's kind of ask (routeRole), best first: "Pick up more".
+   * @param {Object} member
+   * @param {Object[]} sponsors
+   * @param {Object} [settings]
+   * @param {number} [n]
+   * @returns {Array<{sponsor: Object, score: number, reasons: string[]}>}
+   */
+  function pickUpMore(member, sponsors, settings, n) {
+    const role = member && member.role === 'vp' ? 'vp' : 'coordinator';
+    return rankProspects(sponsors, function (s) {
+      return !text(s.owner_id) && routeRole(s, settings) === role;
+    }).slice(0, n || 5);
+  }
+
+  /**
+   * What to ask this sponsor for: the ask written on it, or one that suits its kind of business,
+   * using the giving ladder for money asks.
+   * @param {Object} s
+   * @param {Array<{amount: number, text: string}>} [ladder]
+   * @returns {string}
+   */
+  function suggestAsk(s, ladder) {
+    if (text(s.ask_summary)) return text(s.ask_summary);
+    const category = text(s.category);
+    if (category === 'cafe-bakery' || category === 'restaurant') {
+      return 'Food or baked goods for an event, or $100–250 (100–250 meals)';
+    }
+    if (category === 'grocery') return 'Food or ingredients for a food-making day';
+    if (category === 'retail') return 'Prizes or a gift card for an event raffle';
+    if (category === 'education-consulting') return 'Impact Sprint prizes, a judge, or $500';
+    const steps = (ladder && ladder.length ? ladder : DEFAULT_SETTINGS.giving_ladder)
+      .filter(function (step) {
+        return isFinite(Number(step.amount)) && Number(step.amount) > 0;
+      })
+      .sort(function (a, b) {
+        return Number(a.amount) - Number(b.amount);
+      });
+    if (!steps.length) return '';
+    const value = Number(s.potential_value_cad);
+    const target = isFinite(value) && value > 0 ? value : category === 'corporate' ? 1000 : 500;
+    let pick = steps[0];
+    steps.forEach(function (step) {
+      if (Number(step.amount) <= target) pick = step;
+    });
+    return '$' + formatNumber(pick.amount) + ' — ' + text(pick.text);
+  }
+
+  /**
+   * Progress toward the term's goal, for Home.
+   * @param {Object[]} sponsors
+   * @param {Object[]} activities
+   * @param {string} today
+   * @param {number} goal
+   * @returns {{won: number, goal: number, percent: number, wonCount: number, asksOut: number, talking: number}}
+   */
+  function termProgress(sponsors, activities, today, goal) {
+    const won = wonThisTerm(sponsors, activities, today);
+    const live = sponsors.filter(function (s) {
+      return !isTrue(s.archived);
+    });
+    const target = Number(goal) > 0 ? Number(goal) : DEFAULT_SETTINGS.term_goal_cad;
+    return {
+      won: won.sum,
+      goal: target,
+      percent: Math.max(0, Math.min(100, Math.round((won.sum / target) * 100))),
+      wonCount: won.count,
+      asksOut: live.filter(function (s) {
+        return phaseOf(s.stage) === 'Outreach';
+      }).length,
+      talking: live.filter(function (s) {
+        return phaseOf(s.stage) === 'Conversation';
+      }).length,
     };
   }
 
@@ -4728,6 +5128,14 @@ const Rules = (function () {
     stagesIn,
     roleAtLeast,
     derivedId,
+    prospectScore,
+    rankProspects,
+    routeRole,
+    planHandOut,
+    myAsks,
+    pickUpMore,
+    suggestAsk,
+    termProgress,
     parseSettings,
     parseIsoDate,
     isIsoDate,
@@ -7373,6 +7781,7 @@ const Rules = (function () {
             Hub.openSponsor(s.id);
           },
         },
+        Hub.logo ? Hub.logo(s) : null,
         h(
           'div',
           { class: 'row-main' },
@@ -8749,6 +9158,7 @@ const Rules = (function () {
           if (!res || !res.rows) return;
           const tasks = res.rows.Tasks || [];
           const label = 'Moved ' + s.name + ' to ' + Rules.STAGE_LABEL[toStage];
+          if (Rules.phaseOf(toStage) === 'Won' && Rules.phaseOf(s.stage) !== 'Won' && Hub.celebrate) Hub.celebrate();
           Hub.toast({ text: tasks.length ? label + ' · ' + Hub.plural(tasks.length, 'task') + ' added' : label, ms: 4000 });
         },
       });
@@ -9601,6 +10011,527 @@ const Rules = (function () {
 
     <script>
   /*
+   * Who asks whom, and what to ask next: ranked prospects, each person's asks for the week, the
+   * VP's hand-out list, presidents' and exec's own asks (warm intros), plus the pieces that make
+   * the Hub feel alive: sponsor logos, the term's progress, the wins wall and a small celebration
+   * when something is won. The ranking and routing rules are in shared/rules.js.
+   */
+  (function () {
+    'use strict';
+    const Hub = window.Hub;
+    const h = Hub.h;
+
+    /** A colour per kind of sponsor, for the logo placeholder. */
+    const CATEGORY_HUE = {
+      'cafe-bakery': 24,
+      restaurant: 4,
+      grocery: 130,
+      retail: 280,
+      corporate: 215,
+      campus: 200,
+      'education-consulting': 45,
+      nonprofit: 160,
+      other: 0,
+    };
+
+    /** @param {string} url @returns {string} the site's host name, or '' */
+    function hostOf(url) {
+      const raw = String(url || '').trim();
+      if (!raw) return '';
+      try {
+        return new URL(/^https?:\/\//i.test(raw) ? raw : 'https://' + raw).hostname;
+      } catch (err) {
+        return '';
+      }
+    }
+
+    /**
+     * A sponsor's logo: its website's icon when it has a website, over a coloured square with its
+     * initials (which is what shows when there is no icon).
+     * @param {Object} s
+     * @param {number} [size] pixels, 32 by default
+     * @returns {HTMLElement}
+     */
+    function logo(s, size) {
+      const px = size || 32;
+      const hue = Object.prototype.hasOwnProperty.call(CATEGORY_HUE, s.category) ? CATEGORY_HUE[s.category] : 0;
+      const box = h(
+        'span',
+        {
+          class: 'logo',
+          'aria-hidden': 'true',
+          style: 'width:' + px + 'px;height:' + px + 'px;font-size:' + Math.round(px * 0.38) + 'px;background:hsl(' + hue + ' 55% 45%)',
+        },
+        Hub.initials(s.name || '?')
+      );
+      const host = hostOf(s.website);
+      if (host) {
+        const img = h('img', {
+          src: 'https://www.google.com/s2/favicons?sz=64&domain=' + encodeURIComponent(host),
+          alt: '',
+          loading: 'lazy',
+          referrerpolicy: 'no-referrer',
+        });
+        img.addEventListener('error', function () {
+          img.remove();
+        });
+        Hub.add(box, img);
+      }
+      return box;
+    }
+
+    /** @param {number} score @returns {HTMLElement} the 0–100 score as a small pill */
+    function scorePill(score) {
+      const level = score >= 70 ? 'high' : score >= 45 ? 'mid' : 'low';
+      return h('span', { class: 'score ' + level, title: 'How good an ask this is, out of 100' }, String(score));
+    }
+
+    /**
+     * One ranked prospect.
+     * @param {{sponsor: Object, score: number, reasons: string[]}} r
+     * @param {{sub?: string, actions?: Node[]}} [opts]
+     * @returns {HTMLElement}
+     */
+    function prospectRow(r, opts) {
+      const o = opts || {};
+      const s = r.sponsor;
+      return h(
+        'li',
+        {
+          class: 'row clickable prospect',
+          onClick: function () {
+            Hub.openSponsor(s.id);
+          },
+        },
+        logo(s),
+        h(
+          'div',
+          { class: 'row-main' },
+          h(
+            'div',
+            { class: 'hstack' },
+            h('span', { class: 'row-title' }, s.name),
+            scorePill(r.score),
+            r.reasons.slice(0, 2).map(function (reason) {
+              return h('span', { class: 'chip outline small-chip' }, reason);
+            })
+          ),
+          h('div', { class: 'row-sub' }, o.sub !== undefined ? o.sub : Rules.suggestAsk(s, Hub.settings().giving_ladder))
+        ),
+        o.actions && o.actions.length ? h('div', { class: 'row-actions' }, o.actions) : null
+      );
+    }
+
+    // ---- Coordinators (and VPs): this week's asks ------------------------------------------
+
+    /** @returns {HTMLElement} "Your asks this week": your own prospects, best first */
+    function myAsksSection() {
+      const me = Hub.state.me;
+      const set = Hub.settings();
+      const sponsors = Hub.rows('Sponsors');
+      const asks = Rules.myAsks(me.id, sponsors, set.asks_per_week);
+      return h(
+        'section',
+        { class: 'section', id: 'my-asks' },
+        Hub.sectionHead('Your asks this week', asks.length || null),
+        h('p', { class: 'muted small', style: 'margin:-4px 0 8px' }, 'Your prospects, best first, with what to ask for. Log it the moment you have asked.'),
+        asks.length
+          ? h(
+              'ul',
+              { class: 'list card' },
+              asks.map(function (r) {
+                return prospectRow(r, {
+                  actions: [
+                    Hub.rowButton('Log', function () {
+                      Hub.openLog({ sponsorId: r.sponsor.id });
+                    }),
+                  ],
+                });
+              })
+            )
+          : h('div', { class: 'card' }, Hub.emptyState('No prospects of yours are waiting. Pick some up below.'))
+      );
+    }
+
+    /** @returns {HTMLElement|null} unassigned prospects that are this person's kind of ask */
+    function pickUpSection() {
+      const me = Hub.state.me;
+      const more = Rules.pickUpMore(me, Hub.rows('Sponsors'), Hub.settings(), 5);
+      if (!more.length) return null;
+      return h(
+        'section',
+        { class: 'section', id: 'pick-up' },
+        Hub.sectionHead('Pick up more', more.length),
+        h('p', { class: 'muted small', style: 'margin:-4px 0 8px' }, me.role === 'vp' ? 'Unowned companies and campus units: VP asks.' : 'Unowned local businesses: the asks coordinators make best, often as a walk-in.'),
+        h(
+          'ul',
+          { class: 'list card' },
+          more.map(function (r) {
+            return prospectRow(r, {
+              actions: [
+                Hub.rowButton('Take', function () {
+                  Hub.takeSponsor(r.sponsor.id);
+                  Hub.toast({ text: r.sponsor.name + ' is yours. It is on your asks.', ms: 3000 });
+                }),
+              ],
+            });
+          })
+        )
+      );
+    }
+
+    // ---- VPs: handing out prospects ----------------------------------------------------------
+
+    /** @returns {HTMLElement|null} the best unowned prospects, each with a suggested owner */
+    function handOutSection() {
+      if (!Hub.isVp()) return null;
+      const sponsors = Hub.rows('Sponsors');
+      const unowned = Rules.rankProspects(sponsors, function (s) {
+        return !s.owner_id;
+      }).length;
+      if (!unowned) return null;
+      const showAll = Hub.state.ui.handOutAll;
+      const plan = Rules.planHandOut(sponsors, Hub.activeMembers(), Hub.settings(), showAll ? 0 : 8);
+      const assignable = plan.filter(function (p) {
+        return p.owner;
+      });
+      return h(
+        'section',
+        { class: 'section', id: 'hand-out' },
+        Hub.sectionHead(
+          'Hand out prospects',
+          unowned,
+          assignable.length
+            ? h(
+                'button',
+                {
+                  type: 'button',
+                  class: 'btn btn-secondary btn-xs',
+                  onClick: function () {
+                    assignAll(assignable);
+                  },
+                },
+                'Assign these ' + assignable.length
+              )
+            : null
+        ),
+        h('p', { class: 'muted small', style: 'margin:-4px 0 8px' }, 'Best first. Local businesses go to coordinators, companies, campus units and big asks to VPs, to whoever has the fewest. Change the rules in Settings.'),
+        h(
+          'ul',
+          { class: 'list card' },
+          plan.map(function (p) {
+            const who = p.owner ? Rules.firstName(p.owner.full_name) : '';
+            return prospectRow(p, {
+              sub: (who ? 'Suggested: ' + who + ' · ' : '') + Rules.suggestAsk(p.sponsor, Hub.settings().giving_ladder),
+              actions: [
+                p.owner
+                  ? Hub.rowButton('Give to ' + who, function () {
+                      Hub.updateSponsor(p.sponsor.id, { owner_id: p.owner.id });
+                    })
+                  : null,
+                Hub.rowButton('Other', function () {
+                  Hub.openOwner(p.sponsor.id);
+                }),
+              ].filter(Boolean),
+            });
+          })
+        ),
+        unowned > plan.length
+          ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: function () { Hub.state.ui.handOutAll = true; Hub.render(true); } }, 'Show all ' + unowned)
+          : null
+      );
+    }
+
+    /** @param {Array<{sponsor: Object, owner: Object}>} plan */
+    function assignAll(plan) {
+      plan.forEach(function (p) {
+        Hub.updateSponsor(p.sponsor.id, { owner_id: p.owner.id });
+      });
+      const names = {};
+      plan.forEach(function (p) {
+        const n = Rules.firstName(p.owner.full_name);
+        names[n] = (names[n] || 0) + 1;
+      });
+      Hub.toast({
+        text: 'Handed out ' + Hub.plural(plan.length, 'prospect') + ': ' + Object.keys(names).map(function (n) { return n + ' ' + names[n]; }).join(', ') + '.',
+        ms: 5000,
+      });
+    }
+
+    // ---- Presidents and exec: their own asks --------------------------------------------------
+
+    /** @returns {HTMLElement} the open asks on this person's list (warm intros and the like) */
+    function myAsksForExec() {
+      const me = Hub.state.me;
+      const tasks = Hub.rows('Tasks')
+        .filter(function (t) {
+          return t.owner_id === me.id && Rules.isOpenTask(t);
+        })
+        .sort(function (a, b) {
+          return String(a.due_on || '9999') < String(b.due_on || '9999') ? -1 : 1;
+        });
+      return h(
+        'section',
+        { class: 'section', id: 'exec-asks' },
+        Hub.sectionHead('Asked of you', tasks.length || null),
+        tasks.length
+          ? h(
+              'ul',
+              { class: 'list card' },
+              tasks.map(function (t) {
+                const s = t.sponsor_id ? Hub.byId('Sponsors', t.sponsor_id) : null;
+                return h(
+                  'li',
+                  { class: 'row' },
+                  s ? logo(s) : h('span', { class: 'logo', 'aria-hidden': 'true', style: 'width:32px;height:32px;background:var(--accent)' }, '★'),
+                  h(
+                    'div',
+                    { class: 'row-main' },
+                    h('div', { class: 'row-title' }, t.title),
+                    h('div', { class: 'row-sub' }, (t.due_on ? 'By ' + Rules.dayLabel(t.due_on) + ' · ' : '') + 'from ' + (Hub.memberName(t.updated_by) || 'Sponsorships'))
+                  ),
+                  h(
+                    'div',
+                    { class: 'row-actions' },
+                    Hub.rowButton('Done', function () {
+                      Hub.completeTask(t.id);
+                    })
+                  )
+                );
+              })
+            )
+          : h('div', { class: 'card' }, Hub.emptyState('Nothing asked of you right now. If you know someone at a business that could help, tap Ask Sponsorships.'))
+      );
+    }
+
+    /** A VP asks someone on the team for a warm introduction to a sponsor. */
+    function openAskIntro(sponsorId) {
+      const s = Hub.byId('Sponsors', sponsorId);
+      if (!s || !Hub.isVp()) return;
+      const people = Hub.activeMembers()
+        .filter(function (m) {
+          return m.id !== Hub.state.me.id;
+        })
+        .sort(function (a, b) {
+          const rank = function (m) {
+            return m.role === 'president' || m.role === 'exec' ? 0 : 1;
+          };
+          return rank(a) - rank(b) || (a.full_name < b.full_name ? -1 : 1);
+        });
+      const st = { owner: '', note: '' };
+      const api = Hub.openSheet({
+        title: 'Ask for an intro to ' + s.name,
+        size: 'small',
+        render: function (body) {
+          Hub.add(
+            body,
+            h('p', { class: 'muted small' }, 'Whoever you pick gets "Intro to ' + s.name + '" on their list, due in a week.'),
+            Hub.field(
+              'Who knows someone there?',
+              h(
+                'select',
+                {
+                  class: 'select',
+                  onChange: function (e) {
+                    st.owner = e.target.value;
+                  },
+                },
+                h('option', { value: '' }, 'Pick someone'),
+                people.map(function (m) {
+                  return h('option', { value: m.id }, m.full_name + ' (' + Hub.labelOf(Rules.ROLE_LABEL, m.role) + ')');
+                })
+              )
+            ),
+            Hub.field(
+              'Anything they should know (optional)',
+              h('input', {
+                class: 'input',
+                maxlength: 200,
+                placeholder: 'e.g. ask for the community manager',
+                onInput: function (e) {
+                  st.note = e.target.value;
+                },
+              })
+            )
+          );
+        },
+        foot: function (f) {
+          Hub.add(
+            f,
+            h(
+              'button',
+              {
+                type: 'button',
+                class: 'btn btn-primary-wide',
+                onClick: function () {
+                  if (!st.owner) {
+                    Hub.toast({ error: true, text: 'Pick who to ask.' });
+                    return;
+                  }
+                  const id = Hub.uuid();
+                  const note = st.note.trim();
+                  const row = {
+                    id: id,
+                    title: 'Intro to ' + s.name + (note ? ': ' + note : ''),
+                    owner_id: st.owner,
+                    due_on: Rules.addDays(Hub.today(), 7),
+                    sponsor_id: s.id,
+                    event_id: '',
+                    source: 'manual',
+                    status: 'open',
+                    created_at: Hub.nowIso(),
+                    updated_at: '',
+                    updated_by: Hub.state.me.id,
+                  };
+                  Hub.save({
+                    what: 'the intro request',
+                    inserts: [{ tab: 'Tasks', row: row }],
+                    send: function () {
+                      return Hub.call('askForIntro', { id: id, sponsor_id: s.id, owner_id: st.owner, note: note });
+                    },
+                  });
+                  api.close('saved');
+                  Hub.toast({ text: 'Asked ' + Rules.firstName(Hub.memberName(st.owner)) + ' for an intro to ' + s.name + '.', ms: 3500 });
+                },
+              },
+              'Ask'
+            )
+          );
+        },
+      });
+      return api;
+    }
+
+    // ---- Progress and wins --------------------------------------------------------------------
+
+    /** @returns {HTMLElement} the term's progress toward its goal (Home) */
+    function progressStrip() {
+      const set = Hub.settings();
+      const p = Rules.termProgress(Hub.rows('Sponsors'), Hub.rows('Activity'), Hub.today(), set.term_goal_cad);
+      return h(
+        'section',
+        { class: 'card card-pad progress-strip' },
+        h(
+          'div',
+          { class: 'hstack', style: 'align-items:baseline;flex-wrap:wrap;gap:6px 12px' },
+          h('span', { class: 'big-number' }, Hub.money(p.won)),
+          h('span', { class: 'muted' }, 'of ' + Hub.money(p.goal) + ' this term'),
+          h('span', { class: 'grow' }),
+          h('span', { class: 'muted small' }, p.percent + '%')
+        ),
+        h(
+          'div',
+          { class: 'goal-bar', role: 'progressbar', 'aria-valuenow': p.won, 'aria-valuemax': p.goal, 'aria-label': 'Raised this term' },
+          h('span', { style: 'width:' + p.percent + '%' })
+        ),
+        h(
+          'div',
+          { class: 'progress-facts' },
+          fact(p.wonCount, 'won', function () { Hub.setPipelineFilter({ phase: 'Won' }); }),
+          fact(p.talking, 'in conversation', function () { Hub.setPipelineFilter({ phase: 'Conversation' }); }),
+          fact(p.asksOut, 'asks out', function () { Hub.setPipelineFilter({ phase: 'Outreach' }); })
+        )
+      );
+    }
+
+    function fact(n, label, onClick) {
+      return h('button', { type: 'button', class: 'fact', onClick: onClick }, h('strong', null, String(n)), ' ' + label);
+    }
+
+    /** @returns {HTMLElement|null} every sponsor won this term, with its logo (Team) */
+    function winsWall() {
+      const won = Rules.wonThisTerm(Hub.rows('Sponsors'), Hub.rows('Activity'), Hub.today());
+      return h(
+        'section',
+        { class: 'section' },
+        Hub.sectionHead('Wins this term', won.count || null),
+        won.count
+          ? h(
+              'div',
+              { class: 'wins-wall' },
+              won.sponsors.map(function (s) {
+                return h(
+                  'button',
+                  {
+                    type: 'button',
+                    class: 'win-card',
+                    onClick: function () {
+                      Hub.openSponsor(s.id);
+                    },
+                  },
+                  logo(s, 40),
+                  h('span', { class: 'win-name' }, s.name),
+                  h('span', { class: 'muted small' }, (s.potential_value_cad ? Hub.money(Number(s.potential_value_cad)) + ' · ' : '') + (Hub.memberName(s.owner_id) || ''))
+                );
+              })
+            )
+          : h('div', { class: 'card' }, Hub.emptyState('No wins yet this term. The first one goes here.'))
+      );
+    }
+
+    /** A short burst of confetti when a sponsor is won (none for people who prefer less motion). */
+    function celebrate() {
+      try {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const canvas = document.createElement('canvas');
+        if (!canvas.getContext) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        canvas.className = 'confetti';
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        document.body.appendChild(canvas);
+        const colours = ['#cd1e2f', '#f2b705', '#2e9e5b', '#2f6fde', '#ffffff'];
+        const bits = [];
+        for (let i = 0; i < 120; i++) {
+          bits.push({
+            x: canvas.width / 2,
+            y: canvas.height / 3,
+            vx: (Math.random() - 0.5) * 14,
+            vy: Math.random() * -12 - 4,
+            size: 5 + Math.random() * 6,
+            colour: colours[i % colours.length],
+            spin: Math.random() * 6,
+          });
+        }
+        let frame = 0;
+        function step() {
+          frame++;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          bits.forEach(function (b) {
+            b.vy += 0.35;
+            b.x += b.vx;
+            b.y += b.vy;
+            b.spin += 0.2;
+            ctx.fillStyle = b.colour;
+            ctx.fillRect(b.x, b.y, b.size, b.size * Math.abs(Math.sin(b.spin)) + 2);
+          });
+          if (frame < 110) window.requestAnimationFrame(step);
+          else canvas.remove();
+        }
+        window.requestAnimationFrame(step);
+      } catch (err) {
+        // a celebration is never worth an error
+      }
+    }
+
+    Object.assign(Hub, {
+      logo: logo,
+      prospectRow: prospectRow,
+      myAsksSection: myAsksSection,
+      pickUpSection: pickUpSection,
+      handOutSection: handOutSection,
+      myAsksForExec: myAsksForExec,
+      openAskIntro: openAskIntro,
+      progressStrip: progressStrip,
+      winsWall: winsWall,
+      celebrate: celebrate,
+    });
+  })();
+</script>
+
+    <script>
+  /*
    * Home (docs/PLAN.md §10.10): the VP's two-minute morning check and the team's accountability
    * screen. Tiles, Needs attention (oldest first, owner shown, never ranked), requests with nobody
    * on them, Awaiting VP, events, hot leads, revisit, and this week's numbers.
@@ -9635,6 +10566,7 @@ const Rules = (function () {
           h('div', { class: 'grow' }, h('p', { class: 'eyebrow' }, Rules.dayLabel(today)), h('h1', null, 'Hi, ' + Rules.firstName(me.full_name))),
           Hub.canEdit() ? h('button', { type: 'button', class: 'btn btn-secondary btn-sm desktop-only', onClick: function () { Hub.openAddSponsor(); } }, Hub.icon('plus'), 'Add sponsor') : null
         ),
+        Hub.progressStrip(),
         h(
           'div',
           { class: 'tiles' },
@@ -9657,11 +10589,11 @@ const Rules = (function () {
       );
 
       if (Hub.isDesktop()) {
-        Hub.add(left, needsAttention(attention), dueSoon(data, today), requestsWithNobody(), awaiting());
+        Hub.add(left, needsAttention(attention), Hub.handOutSection(), dueSoon(data, today), requestsWithNobody(), awaiting());
         Hub.add(right, eventsSection(), hotLeads(), revisit(), thisWeek());
       } else {
         // On a phone, the events (and Impact Sprint's red line) come right after what is overdue.
-        Hub.add(left, needsAttention(attention), eventsSection(), requestsWithNobody(), awaiting(), dueSoon(data, today), hotLeads(), revisit(), thisWeek());
+        Hub.add(left, needsAttention(attention), eventsSection(), Hub.handOutSection(), requestsWithNobody(), awaiting(), dueSoon(data, today), hotLeads(), revisit(), thisWeek());
       }
       return page;
     }
@@ -9918,7 +10850,7 @@ const Rules = (function () {
     const Hub = window.Hub;
     const h = Hub.h;
     const PREF = 'pipeline.v1';
-    const SORTABLE = { name: 'Sponsor', priority: 'Pri', due: 'Due', last: 'Last contact' };
+    const SORTABLE = { name: 'Sponsor', priority: 'Pri', due: 'Due', last: 'Last contact', best: 'Best first' };
 
     function defaults() {
       return {
@@ -9996,6 +10928,7 @@ const Rules = (function () {
     }
 
     function sortKey(s, key) {
+      if (key === 'best') return String(1000 - Rules.prospectScore(s).score).padStart(4, '0') + String(s.name).toLowerCase();
       if (key === 'name') return String(s.name).toLowerCase();
       if (key === 'priority') return (s.priority || 'Z') + String(s.name).toLowerCase();
       if (key === 'last') return s.last_contact_at || '0000';
@@ -10171,6 +11104,7 @@ const Rules = (function () {
           setFilters({ owner: v });
         })
       );
+      chips.push(toggleChip('Best first', f.sort === 'best', function () { setFilters({ sort: f.sort === 'best' ? 'due' : 'best', dir: 1 }); }));
       chips.push(toggleChip('Overdue', f.due === 'overdue', function () { setFilters({ due: f.due === 'overdue' ? '' : 'overdue' }); }));
       chips.push(toggleChip('Due this week', f.due === 'week', function () { setFilters({ due: f.due === 'week' ? '' : 'week' }); }));
       chips.push(toggleChip('Warm', f.warm, function () { setFilters({ warm: !f.warm }); }));
@@ -10360,7 +11294,8 @@ const Rules = (function () {
           h(
             'td',
             { title: s.name },
-            h('span', { style: 'font-weight:600' }, s.name),
+            h('span', { class: 'hstack', style: 'gap:8px;display:inline-flex;vertical-align:middle' }, Hub.logo(s, 22), h('span', { style: 'font-weight:600' }, s.name)),
+            f.sort === 'best' ? h('span', { class: 'score ' + (Rules.prospectScore(s).score >= 70 ? 'high' : Rules.prospectScore(s).score >= 45 ? 'mid' : 'low'), style: 'margin-left:6px' }, String(Rules.prospectScore(s).score)) : null,
             !compact && Rules.isWarm(s) ? h('span', { class: 'chip warm', style: 'margin-left:6px' }, 'warm') : null,
             !compact && !Rules.hasContact(s) ? h('span', { class: 'chip outline', style: 'margin-left:6px' }, 'no contact') : null
           ),
@@ -10474,7 +11409,16 @@ const Rules = (function () {
             h('span', { class: 'grow' }),
             h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'More actions', onClick: function () { moreMenu(s); } }, Hub.icon('kebab'))
           ),
-          h('h1', null, s.name),
+          h('div', { class: 'hstack', style: 'gap:12px;align-items:center' }, Hub.logo(s, 44), h('h1', { style: 'margin:0' }, s.name)),
+          h(
+            'p',
+            { class: 'muted small', style: 'margin:6px 0 8px' },
+            (function () {
+              const r = Rules.prospectScore(s);
+              const role = Rules.routeRole(s, Hub.settings());
+              return 'Score ' + r.score + '/100' + (r.reasons.length ? ' · ' + r.reasons.join(', ') : '') + ' · a ' + (role === 'vp' ? 'VP' : 'coordinator') + ' ask';
+            })()
+          ),
           h(
             'div',
             { class: 'hstack wrap' },
@@ -10640,7 +11584,7 @@ const Rules = (function () {
         null,
         kv([
           ['Ask type', s.ask_type],
-          ['Asking for', s.ask_summary],
+          ['Asking for', s.ask_summary || 'Suggested: ' + Rules.suggestAsk(s, Hub.settings().giving_ladder)],
           ['Value', s.potential_value_cad !== '' && s.potential_value_cad !== null && s.potential_value_cad !== undefined ? Hub.money(s.potential_value_cad) : ''],
         ]),
         links.length
@@ -10813,6 +11757,7 @@ const Rules = (function () {
       }
       if (Hub.state.appUrl) items.push({ label: 'Copy link', icon: 'link', onSelect: function () { Hub.copyDeepLink('sponsor', s.id); } });
       if (Hub.isVp()) {
+        items.push({ label: 'Ask someone for an intro', icon: 'link', onSelect: function () { Hub.openAskIntro(s.id); } });
         items.push({
           label: s.archived === true ? 'Unarchive' : 'Archive (hide everywhere)',
           icon: 'close',
@@ -11100,6 +12045,9 @@ const Rules = (function () {
 
       // Today list
       Hub.add(page, todayList(queue));
+
+      // This week's asks: your best prospects, then unowned ones that are your kind of ask
+      Hub.add(page, Hub.myAsksSection(), Hub.pickUpSection());
 
       // Events that need sponsors soon, one line each
       Hub.add(page, eventAlerts(today));
@@ -11591,6 +12539,7 @@ const Rules = (function () {
           'Data as of ' + Hub.syncedAtLabel() + ' · Won this term: ' + won.count + (won.sum ? ' (' + Hub.money(won.sum) + ')' : '') + (lead ? ' · Questions: ' + lead.full_name + ' · ' + Rules.SHARED_INBOX : '')
         )
       );
+      if (!Hub.canEdit()) Hub.add(page, Hub.myAsksForExec());
       if (!events.length) Hub.add(page, h('div', { class: 'card' }, Hub.emptyState('No upcoming events.')));
       events.forEach(function (e) {
         Hub.add(page, eventRow(e, { expanded: route.id === e.id }));
@@ -12072,6 +13021,9 @@ const Rules = (function () {
       );
       Hub.add(page, scoreboardTable(board, acts, sponsors));
       Hub.add(page, h('p', { class: 'muted small', style: 'margin-top:8px' }, 'Remote = email, call and follow-up. Walk-ins = walk-in. Rows are in roster order; nobody is ranked.'));
+
+      // Wins this term, with logos
+      Hub.add(page, Hub.winsWall());
 
       // Pipeline movement
       Hub.add(page, 
@@ -13349,6 +14301,74 @@ const Rules = (function () {
                     if (look.values.accent.toLowerCase() !== String(set.accent_hex || '').toLowerCase()) saveSetting('accent_hex', look.values.accent.toUpperCase(), 'Accent', look.seen.accent_hex);
                     saveSetting('giving_ladder', ladder, 'Giving ladder', look.seen.giving_ladder);
                     saved('look');
+                  },
+                },
+                'Save'
+              )
+            : null
+        )
+      );
+
+      // Who asks whom
+      const routing = draft('routing', ['ask_routing', 'big_ask_cad', 'asks_per_week', 'term_goal_cad'], function () {
+        return {
+          map: Object.assign({}, set.ask_routing),
+          big: set.big_ask_cad,
+          perWeek: set.asks_per_week,
+          goal: set.term_goal_cad,
+        };
+      });
+      const rv = routing.values;
+      const CATEGORY_NAMES = Rules.ENUMS.category;
+      Hub.add(page,
+        card(
+          'Who asks whom',
+          h(
+            'div',
+            null,
+            h('p', { class: 'muted small' }, 'Decides whose "asks this week" a prospect lands on, and who the hand-out list suggests. A big ask always goes to a VP.'),
+            h(
+              'div',
+              { class: 'routing-grid' },
+              CATEGORY_NAMES.map(function (c) {
+                return Hub.field(
+                  Hub.labelOf(Rules.CATEGORY_LABEL, c),
+                  h(
+                    'select',
+                    {
+                      class: 'select',
+                      disabled: !vp || null,
+                      onChange: function (e) {
+                        rv.map[c] = e.target.value;
+                        routing.dirty = true;
+                      },
+                    },
+                    ['coordinator', 'vp'].map(function (role) {
+                      const opt = h('option', { value: role }, role === 'vp' ? 'VPs' : 'Coordinators');
+                      if ((rv.map[c] || 'coordinator') === role) opt.selected = true;
+                      return opt;
+                    })
+                  )
+                );
+              })
+            ),
+            numberField('A big ask (always a VP) starts at, in dollars', rv.big, function (v) { rv.big = v; routing.dirty = true; }, { disabled: !vp || null }),
+            numberField('Asks per person each week', rv.perWeek, function (v) { rv.perWeek = v; routing.dirty = true; }, { disabled: !vp || null, min: 1 }),
+            numberField('This term\'s goal, in dollars (Home progress bar)', rv.goal, function (v) { rv.goal = v; routing.dirty = true; }, { disabled: !vp || null })
+          ),
+          vp
+            ? h(
+                'button',
+                {
+                  type: 'button',
+                  class: 'btn btn-sm',
+                  onClick: function () {
+                    if (blankNumber({ big: rv.big, perWeek: rv.perWeek, goal: rv.goal }, { big: 'A big ask starts at', perWeek: 'Asks per person each week', goal: 'This term\'s goal' })) return;
+                    saveSetting('ask_routing', rv.map, 'Who asks whom', routing.seen.ask_routing);
+                    if (rv.big !== set.big_ask_cad) saveSetting('big_ask_cad', Number(rv.big), 'Big ask', routing.seen.big_ask_cad);
+                    if (rv.perWeek !== set.asks_per_week) saveSetting('asks_per_week', Number(rv.perWeek), 'Asks per week', routing.seen.asks_per_week);
+                    if (rv.goal !== set.term_goal_cad) saveSetting('term_goal_cad', Number(rv.goal), 'Term goal', routing.seen.term_goal_cad);
+                    saved('routing');
                   },
                 },
                 'Save'
