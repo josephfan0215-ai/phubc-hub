@@ -3931,6 +3931,7 @@ const Rules = (function () {
     'event date': 'event_date',
     date: 'event_date',
     ask: 'ask_summary',
+    "what we're asking for": 'ask_summary',
     'the ask': 'ask_summary',
     'what we are asking for': 'ask_summary',
     meals: 'meals',
@@ -13964,7 +13965,7 @@ const Rules = (function () {
             return;
           }
           if (Rules.isStubTemplate(t)) {
-            Hub.add(body, h('div', { class: 'banner warn' }, h('div', { class: 'grow' }, 'This template has no text yet. A VP pastes it from the Everything doc (tab: Our Cold Emails) on the Templates page.')));
+            Hub.add(body, h('div', { class: 'banner warn' }, h('div', { class: 'grow' }, 'This template has no text yet. A VP writes it on the Templates page.')));
             return;
           }
           if (events.length > 1) {
@@ -14117,7 +14118,12 @@ const Rules = (function () {
             h('div', { class: 'hstack wrap', style: 'margin-bottom:6px' }, h('h2', { class: 'grow' }, t.name), h('span', { class: 'chip outline' }, t.kind === 'custom' ? 'added by a VP' : String(t.kind).replace(/_/g, ' '))),
             t.subject ? h('p', { class: 'small' }, h('strong', null, 'Subject: '), Rules.plainText(t.subject)) : null,
             stub
-              ? h('div', { class: 'banner warn' }, h('div', { class: 'grow' }, 'No text yet. ' + (Hub.isVp() ? 'Paste it from the Everything doc (tab: Our Cold Emails) with Edit.' : 'A VP pastes it from the Everything doc.')))
+              ? h(
+                  'div',
+                  { class: 'banner warn' },
+                  h('div', { class: 'grow' }, 'No text yet. ' + (t.kind === 'custom' ? (Hub.isVp() ? 'Tap Edit to write it.' : 'A VP writes it.') : Hub.isVp() ? 'Paste it from the Everything doc (tab: Our Cold Emails) with Edit.' : 'A VP pastes it from the Everything doc.')),
+                  Hub.isVp() ? h('button', { type: 'button', class: 'btn btn-sm', onClick: function () { openEditor(t.id); } }, 'Write it') : null
+                )
               : h('div', { class: t.kind === 'walk_in_script' ? 'script-large' : '' }, highlighted(rendered)),
             noInbox ? h('p', { class: 'muted small', style: 'margin-top:6px' }, 'Tip: end with the signature so replies reach the shared inbox: ' + Rules.SHARED_INBOX) : null,
             h(
@@ -14148,7 +14154,8 @@ const Rules = (function () {
       const v = {
         name: t ? t.name : from ? from.name + ' (copy)' : '',
         subject: start.subject || '',
-        body: start.body || '',
+        // An empty template ("TODO: ...") opens with an empty box to write in.
+        body: Rules.isStubTemplate(start) ? '' : start.body || '',
       };
       let area = null;
       let preview = null;
@@ -14200,7 +14207,7 @@ const Rules = (function () {
         title: t ? 'Edit · ' + t.name : 'New template',
         size: 'tall wide',
         isDirty: function () {
-          return t ? v.body !== t.body || v.subject !== (t.subject || '') || v.name !== t.name : !!(v.name.trim() || v.body.trim());
+          return t ? (v.body !== t.body && !(Rules.isStubTemplate(t) && !v.body)) || v.subject !== (t.subject || '') || v.name !== t.name : !!(v.name.trim() || v.body.trim());
         },
         render: function (body) {
           area = h('textarea', {
