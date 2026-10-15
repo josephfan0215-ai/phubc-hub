@@ -2059,6 +2059,13 @@
     z-index: 2000;
     pointer-events: none;
   }
+  .editor-tools {
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .editor-tools .fchip strong {
+    font-weight: 800;
+  }
   .routing-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -2201,6 +2208,7 @@ const Rules = (function () {
       'education_consulting',
       'walk_in_script',
       'thank_you',
+      'custom',
     ],
   });
 
@@ -3885,9 +3893,107 @@ const Rules = (function () {
   function templateFields(body) {
     const re = /\{\{\s*([a-z_][a-z0-9_]*)\s*\}\}/gi;
     const names = [];
+    const expanded = expandTemplate(body).text;
     let match;
-    while ((match = re.exec(String(body))) !== null) names.push(match[1]);
+    while ((match = re.exec(expanded)) !== null) names.push(match[1]);
     return unique(names);
+  }
+
+  /**
+   * Square-bracket shortcuts people write naturally ("[Your name]", "[Company Name]"), and what
+   * the Hub fills them with. Matched without regard to case or extra spaces.
+   */
+  const BRACKET_FIELDS = deepFreeze({
+    'your name': 'sender_name',
+    'my name': 'sender_name',
+    'sender name': 'sender_name',
+    'your full name': 'sender_name',
+    name: 'contact_name',
+    'first name': 'contact_name',
+    'contact name': 'contact_name',
+    contact: 'contact_name',
+    'their name': 'contact_name',
+    'recipient name': 'contact_name',
+    'company name': 'sponsor_name',
+    company: 'sponsor_name',
+    'business name': 'sponsor_name',
+    business: 'sponsor_name',
+    'sponsor name': 'sponsor_name',
+    sponsor: 'sponsor_name',
+    'organization name': 'sponsor_name',
+    'organisation name': 'sponsor_name',
+    organization: 'sponsor_name',
+    organisation: 'sponsor_name',
+    'store name': 'sponsor_name',
+    'restaurant name': 'sponsor_name',
+    event: 'event_name',
+    'event name': 'event_name',
+    'event date': 'event_date',
+    date: 'event_date',
+    ask: 'ask_summary',
+    'the ask': 'ask_summary',
+    'what we are asking for': 'ask_summary',
+    meals: 'meals',
+    'meals served': 'meals',
+    'number of meals': 'meals',
+    'year founded': 'founded_year',
+    'founded year': 'founded_year',
+  });
+
+  /**
+   * A template's text with every [square bracket] turned into a {{shortcut}}: a known one
+   * ("[Your name]") into the field the Hub fills, anything else ("[Why them]") into a blank to fill
+   * in when copying, remembered with its own wording as the label.
+   * @param {string} body
+   * @returns {{text: string, labels: Object<string, string>}}
+   */
+  function expandTemplate(body) {
+    const labels = {};
+    const out = String(body === undefined || body === null ? '' : body).replace(
+      /\[([^[\]\n]{1,60})\]/g,
+      function (whole, inner) {
+        const key = inner.trim().toLowerCase().replace(/\s+/g, ' ');
+        if (Object.prototype.hasOwnProperty.call(BRACKET_FIELDS, key)) {
+          return '{{' + BRACKET_FIELDS[key] + '}}';
+        }
+        const slug = key
+          .replace(/[^a-z0-9]+/g, '_')
+          .replace(/^_+|_+$/g, '')
+          .slice(0, 40);
+        if (!slug) return whole;
+        const name = 'b_' + slug;
+        labels[name] = inner.trim();
+        return '{{' + name + '}}';
+      }
+    );
+    return { text: out, labels: labels };
+  }
+
+  /**
+   * @param {string} body
+   * @returns {Object<string, string>} the wording of each fill-in blank made from [square brackets]
+   */
+  function templateLabels(body) {
+    return expandTemplate(body).labels;
+  }
+
+  /**
+   * @param {string} text
+   * @returns {string} the text as email HTML: **bold** in bold, line breaks kept, nothing else
+   *   interpreted (so a sponsor's name can never become markup)
+   */
+  function emailHtml(text) {
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\*\*([^*\n][^\n]*?)\*\*/g, '<b>$1</b>')
+      .replace(/\r?\n/g, '<br>');
+  }
+
+  /** @param {string} text @returns {string} the text without its **bold** marks */
+  function plainText(text) {
+    return String(text).replace(/\*\*([^*\n][^\n]*?)\*\*/g, '$1');
   }
 
   /**
@@ -3899,11 +4005,13 @@ const Rules = (function () {
    */
   function renderTemplate(body, data) {
     const missing = [];
-    const out = String(body).replace(/\{\{\s*([a-z_][a-z0-9_]*)\s*\}\}/gi, function (whole, name) {
+    const expanded = expandTemplate(body);
+    const out = expanded.text.replace(/\{\{\s*([a-z_][a-z0-9_]*)\s*\}\}/gi, function (whole, name) {
       const value = data ? data[name] : undefined;
       if (value === undefined || value === null || String(value).trim() === '') {
         if (missing.indexOf(name) === -1) missing.push(name);
-        return '{{' + name + '}}';
+        // A blank someone wrote in [brackets] stays in their own words.
+        return expanded.labels[name] ? '[' + expanded.labels[name] + ']' : '{{' + name + '}}';
       }
       return String(value);
     });
@@ -5177,6 +5285,10 @@ const Rules = (function () {
     pipelineMovement,
     templateFields,
     renderTemplate,
+    expandTemplate,
+    templateLabels,
+    emailHtml,
+    plainText,
     formatNumber,
     formatDateLong,
     buildTemplateData,
@@ -6070,6 +6182,49 @@ const Rules = (function () {
       return false;
     }
 
+    /**
+     * Copies an email with its formatting: the HTML (bold kept) for Gmail and Outlook, and the plain
+     * text for anywhere that only takes text. Says so; falls back to plain copying.
+     * @param {string} html
+     * @param {string} text
+     * @param {string} [what] e.g. "Email"
+     * @returns {boolean}
+     */
+    function copyRichAndTell(html, text, what) {
+      let set = false;
+      const onCopy = function (e) {
+        if (!e.clipboardData) return;
+        e.preventDefault();
+        e.clipboardData.setData('text/html', html);
+        e.clipboardData.setData('text/plain', text);
+        set = true;
+      };
+      document.addEventListener('copy', onCopy, true);
+      let ok = false;
+      try {
+        ok = copyText(text);
+      } finally {
+        document.removeEventListener('copy', onCopy, true);
+      }
+      if (ok && !set && navigator.clipboard && window.ClipboardItem) {
+        try {
+          navigator.clipboard.write([
+            new window.ClipboardItem({
+              'text/html': new Blob([html], { type: 'text/html' }),
+              'text/plain': new Blob([text], { type: 'text/plain' }),
+            }),
+          ]);
+        } catch (err) {
+          // the plain copy above stands
+        }
+      }
+      if (ok) {
+        toast({ text: (what || 'Text') + ' copied' + (/<b>/.test(html) ? ', bold included' : ''), ms: 2500 });
+        return true;
+      }
+      return copyAndTell(text, what);
+    }
+
     // ---- Router -----------------------------------------------------------------------------
 
     /** Views that exist; anything else goes to the role's landing view. */
@@ -6588,6 +6743,7 @@ const Rules = (function () {
       hideToast: hideToast,
       copyText: copyText,
       copyAndTell: copyAndTell,
+      copyRichAndTell: copyRichAndTell,
       go: go,
       goBack: goBack,
       landingView: landingView,
@@ -13699,18 +13855,50 @@ const Rules = (function () {
       sponsor_name: 'Sponsor name',
       sender_name: 'Your name',
     };
-    const KIND_ORDER = ['walk_in_script', 'cold_email', 'follow_up', 'impact_sprint', 'education_consulting', 'thank_you'];
+    const KIND_ORDER = ['walk_in_script', 'cold_email', 'follow_up', 'impact_sprint', 'education_consulting', 'thank_you', 'custom'];
 
-    /** @param {string} text @returns {HTMLElement} text with {{placeholders}} highlighted */
+    /** The shortcut buttons in the editor: what it says, and what it puts in the text. */
+    const SHORTCUTS = [
+      ['Company name', '{{sponsor_name}}'],
+      ['Contact name', '{{contact_name}}'],
+      ['Your name', '{{sender_name}}'],
+      ['Event', '{{event_name}}'],
+      ['Event date', '{{event_date}}'],
+      ["What we're asking for", '{{ask_summary}}'],
+      ['Meals served', '{{meals}}'],
+      ['A blank to fill in', '[Something to fill in]'],
+    ];
+
+    /**
+     * @param {string} text
+     * @returns {HTMLElement} the text as it will look: **bold** in bold, shortcuts and blanks highlighted
+     */
     function highlighted(text) {
       const out = h('div', { class: 'template-preview' });
       String(text)
-        .split(/(\{\{\s*[a-z_][a-z0-9_]*\s*\}\})/i)
-        .forEach(function (part) {
-          if (/^\{\{/.test(part)) Hub.add(out, h('span', { class: 'ph' }, part));
-          else if (part) Hub.add(out, document.createTextNode(part));
+        .split(/(\*\*[^*\n][^\n]*?\*\*)/)
+        .forEach(function (seg) {
+          const bold = seg.length > 4 && /^\*\*[\s\S]*\*\*$/.test(seg);
+          const box = bold ? h('strong') : out;
+          (bold ? seg.slice(2, -2) : seg)
+            .split(/(\{\{\s*[a-z_][a-z0-9_]*\s*\}\}|\[[^\[\]\n]{1,60}\])/i)
+            .forEach(function (part) {
+              if (/^\{\{/.test(part) || /^\[[^\]]+\]$/.test(part)) Hub.add(box, h('span', { class: 'ph' }, part));
+              else if (part) Hub.add(box, document.createTextNode(part));
+            });
+          if (bold) Hub.add(out, box);
         });
       return out;
+    }
+
+    /** @param {Object} t a template @returns {Object<string, string>} labels of its [bracket] blanks */
+    function bracketLabels(t) {
+      return Object.assign({}, Rules.templateLabels(t.subject || ''), Rules.templateLabels(t.body || ''));
+    }
+
+    /** Copies a filled-in email with its bold, and says so. */
+    function copyEmail(text, what) {
+      return Hub.copyRichAndTell(Rules.emailHtml(text), Rules.plainText(text), what);
     }
 
     function templates() {
@@ -13811,12 +13999,18 @@ const Rules = (function () {
             const dd = data();
             const subject = Rules.renderTemplate(t.subject || '', dd);
             const text = Rules.renderTemplate(t.body || '', dd);
-            const missing = text.missing.concat(subject.missing).filter(function (x, i, a) {
-              return a.indexOf(x) === i;
-            });
+            const labels = bracketLabels(t);
+            const missing = text.missing
+              .concat(subject.missing)
+              .filter(function (x, i, a) {
+                return a.indexOf(x) === i;
+              })
+              .map(function (x) {
+                return labels[x] || FIELD_LABEL[x] || x.replace(/_/g, ' ');
+              });
             Hub.fill(
               preview,
-              subject.text ? h('p', { class: 'small' }, h('strong', null, 'Subject: '), subject.text) : null,
+              subject.text ? h('p', { class: 'small' }, h('strong', null, 'Subject: '), Rules.plainText(subject.text)) : null,
               t.kind === 'walk_in_script' ? h('div', { class: 'script-large' }, highlighted(text.text)) : highlighted(text.text),
               missing.length ? h('p', { class: 'muted small', style: 'margin-top:6px' }, 'Still to fill: ' + missing.join(', ')) : null
             );
@@ -13825,11 +14019,12 @@ const Rules = (function () {
           if (fields.length) {
             Hub.add(body, h('div', { class: 'block-label' }, 'Fill in the highlighted blanks'));
             const grid = h('div', { class: 'fill-grid' });
+            const labels = bracketLabels(t);
             fields.forEach(function (f) {
               Hub.add(
                 grid,
                 Hub.field(
-                  FIELD_LABEL[f] || f.replace(/_/g, ' '),
+                  labels[f] || FIELD_LABEL[f] || f.replace(/_/g, ' '),
                   h('input', {
                     class: 'input',
                     'data-key': 'fill-' + f,
@@ -13857,7 +14052,7 @@ const Rules = (function () {
                 type: 'button',
                 class: 'btn btn-secondary',
                 onClick: function () {
-                  Hub.copyAndTell(Rules.renderTemplate(t.subject || '', data()).text, 'Subject');
+                  Hub.copyAndTell(Rules.plainText(Rules.renderTemplate(t.subject || '', data()).text), 'Subject');
                 },
               }, 'Copy subject')
             );
@@ -13867,7 +14062,7 @@ const Rules = (function () {
               type: 'button',
               class: 'btn btn-primary-wide',
               onClick: function () {
-                if (Hub.copyAndTell(Rules.renderTemplate(t.body || '', data()).text, t.kind === 'walk_in_script' ? 'Script' : 'Email')) {
+                if (copyEmail(Rules.renderTemplate(t.body || '', data()).text, t.kind === 'walk_in_script' ? 'Script' : 'Email')) {
                   st.copied = true;
                   api.refresh();
                 }
@@ -13884,7 +14079,7 @@ const Rules = (function () {
                 onClick: function () {
                   api.close('sent');
                   if (kind === 'walk_in') Hub.openLog({ sponsorId: s.id, kind: kind });
-                  else Hub.quickTouch(s.id, kind, 'Sent: ' + (Rules.renderTemplate(t.subject || '', data()).text || t.name));
+                  else Hub.quickTouch(s.id, kind, 'Sent: ' + (Rules.plainText(Rules.renderTemplate(t.subject || '', data()).text) || t.name));
                 },
               }, Hub.icon('check'), kind === 'walk_in' ? 'Log the walk-in' : 'I sent it: log it')
             );
@@ -13904,6 +14099,7 @@ const Rules = (function () {
           'div',
           { class: 'page-head' },
           h('h1', null, 'Templates'),
+          Hub.isVp() ? h('button', { type: 'button', class: 'btn btn-sm', onClick: function () { openEditor(null); } }, Hub.icon('plus'), 'New template') : null,
           links.one_pager_url ? h('a', { class: 'btn btn-secondary btn-sm', href: links.one_pager_url, target: '_blank', rel: 'noopener' }, Hub.icon('external'), 'One-pager') : null,
           links.everything_doc_url ? h('a', { class: 'btn btn-secondary btn-sm', href: links.everything_doc_url, target: '_blank', rel: 'noopener' }, Hub.icon('external'), 'Everything doc') : null
         ),
@@ -13918,8 +14114,8 @@ const Rules = (function () {
           h(
             'section',
             { class: 'card card-pad section' },
-            h('div', { class: 'hstack wrap', style: 'margin-bottom:6px' }, h('h2', { class: 'grow' }, t.name), h('span', { class: 'chip outline' }, t.kind.replace(/_/g, ' '))),
-            t.subject ? h('p', { class: 'small' }, h('strong', null, 'Subject: '), t.subject) : null,
+            h('div', { class: 'hstack wrap', style: 'margin-bottom:6px' }, h('h2', { class: 'grow' }, t.name), h('span', { class: 'chip outline' }, t.kind === 'custom' ? 'added by a VP' : String(t.kind).replace(/_/g, ' '))),
+            t.subject ? h('p', { class: 'small' }, h('strong', null, 'Subject: '), Rules.plainText(t.subject)) : null,
             stub
               ? h('div', { class: 'banner warn' }, h('div', { class: 'grow' }, 'No text yet. ' + (Hub.isVp() ? 'Paste it from the Everything doc (tab: Our Cold Emails) with Edit.' : 'A VP pastes it from the Everything doc.')))
               : h('div', { class: t.kind === 'walk_in_script' ? 'script-large' : '' }, highlighted(rendered)),
@@ -13927,8 +14123,10 @@ const Rules = (function () {
             h(
               'div',
               { class: 'hstack', style: 'margin-top:10px' },
-              stub ? null : h('button', { type: 'button', class: 'btn btn-secondary btn-sm', onClick: function () { Hub.copyAndTell(rendered, 'Template'); } }, Hub.icon('copy'), 'Copy'),
-              Hub.isVp() ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: function () { openEditor(t.id); } }, 'Edit') : null
+              stub ? null : h('button', { type: 'button', class: 'btn btn-secondary btn-sm', onClick: function () { copyEmail(rendered, 'Template'); } }, Hub.icon('copy'), 'Copy'),
+              Hub.isVp() ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: function () { openEditor(t.id); } }, 'Edit') : null,
+              Hub.isVp() ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: function () { openEditor(null, t); } }, 'Duplicate') : null,
+              Hub.isVp() && t.kind === 'custom' ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm', style: 'color:var(--overdue)', onClick: function () { confirmDelete(t); } }, 'Delete') : null
             )
           )
         );
@@ -13936,23 +14134,108 @@ const Rules = (function () {
       return page;
     }
 
-    function openEditor(id) {
-      const t = Hub.byId('Templates', id);
-      if (!t) return;
-      const v = { name: t.name, subject: t.subject || '', body: t.body || '' };
+    /**
+     * The template editor (VPs): a new template, a copy of one, or an edit. Shortcut buttons put
+     * {{fields}} where the cursor is, Bold wraps the selection in **, and the preview below shows
+     * the email as it will be copied.
+     * @param {string|null} id the template to edit, or null for a new one
+     * @param {Object} [from] for a new one, the template to start from (Duplicate)
+     */
+    function openEditor(id, from) {
+      const t = id ? Hub.byId('Templates', id) : null;
+      if (id && !t) return;
+      const start = t || from || {};
+      const v = {
+        name: t ? t.name : from ? from.name + ' (copy)' : '',
+        subject: start.subject || '',
+        body: start.body || '',
+      };
+      let area = null;
+      let preview = null;
+
+      function updatePreview() {
+        if (!preview) return;
+        const sample = Rules.buildTemplateData({ sponsor: { name: 'Loafe Cafe', contact_name: 'Ana', ask_summary: '$250 for 250 meals' }, member: Hub.state.me, settings: Hub.settings() });
+        Hub.fill(preview, h('div', { class: 'block-label' }, 'How it will look (sample: Loafe Cafe, contact Ana)'), highlighted(Rules.renderTemplate(v.body, sample).text));
+      }
+
+      /** Puts text where the cursor is, replacing any selection. */
+      function insert(snippet, selectInside) {
+        if (!area) return;
+        const a = area.selectionStart;
+        const b = area.selectionEnd;
+        v.body = area.value.slice(0, a) + snippet + area.value.slice(b);
+        area.value = v.body;
+        area.focus();
+        if (selectInside) area.setSelectionRange(a + selectInside[0], a + snippet.length - selectInside[1]);
+        else area.setSelectionRange(a + snippet.length, a + snippet.length);
+        updatePreview();
+      }
+
+      function bold() {
+        if (!area) return;
+        const selected = area.value.slice(area.selectionStart, area.selectionEnd);
+        if (!selected.trim()) insert('**bold words**', [2, 2]);
+        else insert('**' + selected.trim() + '**', [2, 2]);
+      }
+
+      const toolButton = function (label, onClick, title) {
+        return h(
+          'button',
+          {
+            type: 'button',
+            class: 'fchip',
+            title: title || null,
+            // Keep the cursor and selection in the text box while tapping.
+            onMousedown: function (e) {
+              e.preventDefault();
+            },
+            onClick: onClick,
+          },
+          label
+        );
+      };
+
       const api = Hub.openSheet({
-        title: 'Edit · ' + t.name,
+        title: t ? 'Edit · ' + t.name : 'New template',
         size: 'tall wide',
         isDirty: function () {
-          return v.body !== t.body || v.subject !== (t.subject || '') || v.name !== t.name;
+          return t ? v.body !== t.body || v.subject !== (t.subject || '') || v.name !== t.name : !!(v.name.trim() || v.body.trim());
         },
         render: function (body) {
-          Hub.add(body, 
-            Hub.field('Name', h('input', { class: 'input', 'data-key': 'tpl-name', value: v.name, onInput: function (e) { v.name = e.target.value; } })),
-            Hub.field('Subject', h('input', { class: 'input', 'data-key': 'tpl-subject', value: v.subject, onInput: function (e) { v.subject = e.target.value; } })),
-            Hub.field('Text', h('textarea', { class: 'textarea', 'data-key': 'tpl-body', style: 'min-height:280px', value: v.body, onInput: function (e) { v.body = e.target.value; } }), {
-              hint: 'Placeholders the Hub fills: {{contact_name}} {{sponsor_name}} {{event_name}} {{event_date}} {{ask_summary}} {{meals}} {{founded_year}} {{sender_name}}. Anything else in {{double braces}} becomes a field to fill when copying.',
-            }),
+          area = h('textarea', {
+            class: 'textarea',
+            'data-key': 'tpl-body',
+            style: 'min-height:260px',
+            value: v.body,
+            onInput: function (e) {
+              v.body = e.target.value;
+              updatePreview();
+            },
+          });
+          preview = h('div', { style: 'margin-top:12px' });
+          Hub.add(
+            body,
+            Hub.field('Name', h('input', { class: 'input', 'data-key': 'tpl-name', value: v.name, maxlength: 120, placeholder: 'e.g. Grocery store ask', onInput: function (e) { v.name = e.target.value; } })),
+            Hub.field('Subject (optional)', h('input', { class: 'input', 'data-key': 'tpl-subject', value: v.subject, onInput: function (e) { v.subject = e.target.value; } })),
+            h('div', { class: 'block-label' }, 'Text'),
+            h(
+              'div',
+              { class: 'chips-row editor-tools', role: 'toolbar', 'aria-label': 'Formatting and shortcuts' },
+              toolButton(h('strong', null, 'B'), bold, 'Bold: select words, then tap'),
+              h('span', { class: 'muted small', style: 'align-self:center;margin:0 4px 0 8px' }, 'Insert:'),
+              SHORTCUTS.map(function (sc) {
+                return toolButton(sc[0], function () {
+                  insert(sc[1], /^\[/.test(sc[1]) ? [1, 1] : null);
+                }, 'Puts ' + sc[1] + ' where the cursor is');
+              })
+            ),
+            area,
+            h(
+              'p',
+              { class: 'muted small', style: 'margin:6px 0 0' },
+              'Shortcuts fill themselves in from the sponsor. You can also type them in square brackets: [Your name], [Company Name], [Contact Name], [Event], [Event date]. Any other [words in brackets] become a blank to fill in when someone copies the email. Select words and tap B to make them bold.'
+            ),
             h(
               'button',
               {
@@ -13966,33 +14249,89 @@ const Rules = (function () {
                 },
               },
               'Add the signature'
+            ),
+            preview
+          );
+          updatePreview();
+        },
+        foot: function (f) {
+          Hub.add(
+            f,
+            h(
+              'button',
+              {
+                type: 'button',
+                class: 'btn btn-primary-wide',
+                onClick: function () {
+                  if (!v.name.trim()) {
+                    Hub.toast({ error: true, text: 'Give the template a name.' });
+                    return;
+                  }
+                  if (!v.body.trim()) {
+                    Hub.toast({ error: true, text: 'The template needs some text.' });
+                    return;
+                  }
+                  if (!t) {
+                    const id = Hub.uuid();
+                    const row = { id: id, name: v.name.trim(), kind: 'custom', subject: v.subject, body: v.body, created_at: Hub.nowIso(), updated_at: '' };
+                    api.close('saved');
+                    Hub.save({
+                      what: row.name,
+                      inserts: [{ tab: 'Templates', row: row }],
+                      send: function () {
+                        return Hub.call('addTemplate', { id: id, name: row.name, subject: row.subject, body: row.body });
+                      },
+                    });
+                    Hub.toast({ text: 'Added "' + row.name + '". It is in every Copy email now.', ms: 3500 });
+                    return;
+                  }
+                  const patch = {};
+                  if (v.name.trim() !== t.name) patch.name = v.name.trim();
+                  if (v.subject !== (t.subject || '')) patch.subject = v.subject;
+                  if (v.body !== t.body) patch.body = v.body;
+                  api.close('saved');
+                  if (!Object.keys(patch).length) return;
+                  Hub.save({
+                    what: t.name,
+                    changes: [{ tab: 'Templates', id: t.id, patch: patch }],
+                    conflictTab: 'Templates',
+                    send: function () {
+                      return Hub.call('saveTemplate', t.id, patch, Hub.sendVersion('Templates', t.id, t.updated_at || ''));
+                    },
+                  });
+                },
+              },
+              t ? 'Save' : 'Add template'
             )
           );
         },
-        foot: function (f) {
-          Hub.add(f, 
-            h('button', {
-              type: 'button',
-              class: 'btn btn-primary-wide',
-              onClick: function () {
-                const patch = {};
-                if (v.name.trim() !== t.name) patch.name = v.name.trim();
-                if (v.subject !== (t.subject || '')) patch.subject = v.subject;
-                if (v.body !== t.body) patch.body = v.body;
-                api.close('saved');
-                if (!Object.keys(patch).length) return;
-                Hub.save({
-                  what: t.name,
-                  changes: [{ tab: 'Templates', id: t.id, patch: patch }],
-                  conflictTab: 'Templates',
-                  send: function () {
-                    return Hub.call('saveTemplate', t.id, patch, Hub.sendVersion('Templates', t.id, t.updated_at || ''));
-                  },
-                });
-              },
-            }, 'Save')
-          );
-        },
+      });
+      return api;
+    }
+
+    /** Asks once, then deletes a template a VP added. */
+    function confirmDelete(t) {
+      Hub.openMenu({
+        title: 'Delete "' + t.name + '"?',
+        items: [
+          {
+            label: 'Delete template',
+            icon: 'close',
+            danger: true,
+            onSelect: function () {
+              Hub.save({
+                what: t.name,
+                removes: [{ tab: 'Templates', id: t.id }],
+                conflictTab: 'Templates',
+                send: function () {
+                  return Hub.call('deleteTemplate', t.id, Hub.sendVersion('Templates', t.id, t.updated_at || ''));
+                },
+              });
+              Hub.toast({ text: 'Deleted "' + t.name + '".', ms: 2500 });
+            },
+          },
+          { label: 'Keep it', onSelect: function () {} },
+        ],
       });
     }
 
