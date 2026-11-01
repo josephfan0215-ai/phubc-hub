@@ -3304,7 +3304,8 @@ const Rules = (function () {
 
   /**
    * Type-ahead over sponsors: names that start with the query first, then names that contain it,
-   * then contact names and neighbourhoods. Archived sponsors last.
+   * then contact names and neighbourhoods, then what the sponsor is (summary, ask, address), so
+   * "matcha" or "ramen" finds places to pick from. Archived sponsors last.
    * @param {string} query
    * @param {Object[]} sponsors
    * @param {number} [limit] 8 when omitted
@@ -3324,8 +3325,14 @@ const Rules = (function () {
         text(s.neighbourhood).toLowerCase().indexOf(q) !== -1
       )
         score = 2;
+      else if (
+        [s.summary, s.ask_summary, s.address].some(function (v) {
+          return text(v).toLowerCase().indexOf(q) !== -1;
+        })
+      )
+        score = 3;
       if (score < 0) return;
-      if (isTrue(s.archived)) score += 3;
+      if (isTrue(s.archived)) score += 4;
       scored.push({ s: s, score: score, name: name });
     });
     scored.sort(function (a, b) {
@@ -10319,10 +10326,17 @@ const Rules = (function () {
       const me = Hub.state.me;
       const more = Rules.pickUpMore(me, Hub.rows('Sponsors'), Hub.settings(), 5);
       if (!more.length) return null;
+      const unowned = Rules.rankProspects(Hub.rows('Sponsors'), function (s) {
+        return !s.owner_id;
+      }).length;
       return h(
         'section',
         { class: 'section', id: 'pick-up' },
-        Hub.sectionHead('Pick up more', more.length),
+        Hub.sectionHead(
+          'Pick up more',
+          more.length,
+          h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onClick: function () { Hub.setPipelineFilter({ owner: 'none', phase: 'Prospect', sort: 'best' }); } }, 'Browse all ' + unowned)
+        ),
         h('p', { class: 'muted small', style: 'margin:-4px 0 8px' }, me.role === 'vp' ? 'Unowned companies and campus units: VP asks.' : 'Unowned local businesses: the asks coordinators make best, often as a walk-in.'),
         h(
           'ul',
@@ -11147,7 +11161,7 @@ const Rules = (function () {
         class: 'input',
         type: 'search',
         'data-key': 'pipeline-search',
-        placeholder: 'Search sponsors or contacts',
+        placeholder: 'Search: a name, matcha, ramen, Kitsilano…',
         'aria-label': 'Search sponsors',
         autocomplete: 'off',
         value: query,
