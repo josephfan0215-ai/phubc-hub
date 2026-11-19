@@ -11390,7 +11390,22 @@ const Rules = (function () {
         );
         return wrap;
       }
-      Hub.add(wrap, h('p', { class: 'muted small', style: 'margin:0 0 6px' }, Hub.plural(res.shown.length, 'sponsor') + (f.owner === 'me' ? ' you own' : '')));
+      // Filters are remembered per browser, so say plainly when they hide sponsors and how to see
+      // them all (asked 2026-11-18: "it only says 63, where are the other ones").
+      const total = Hub.rows('Sponsors').filter(function (s) { return s.archived !== true; }).length;
+      const hidden = res.shown.length < total;
+      Hub.add(wrap, h('p', { class: 'muted small hstack', style: 'margin:0 0 6px;gap:6px' },
+        hidden
+          ? res.shown.length + ' of ' + total + ' sponsors' + (f.owner === 'me' ? ' (yours)' : '') + ': filters or search hide the rest.'
+          : Hub.plural(res.shown.length, 'sponsor') + (f.owner === 'me' ? ' you own' : ''),
+        hidden
+          ? h('button', { type: 'button', class: 'btn btn-ghost btn-xs', 'data-key': 'pipeline-show-all', onClick: function () {
+              setFilters(Object.assign(defaults(), { owner: 'all', phase: '' }));
+              Hub.state.ui.pipelineQuery = '';
+              Hub.render();
+            } }, 'Show all ' + total)
+          : null
+      ));
       if (Hub.isDesktop()) Hub.add(wrap, table(res.shown, f, panelId));
       else Hub.add(wrap, h('ul', { class: 'list' }, res.shown.map(phoneRow)));
       return wrap;
